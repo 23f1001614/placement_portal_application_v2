@@ -1,8 +1,9 @@
 import os
 from flask import Flask, send_from_directory
 from flask_cors import CORS
+from config import config
 from models import db
-
+from utils.cache import cache, init_cache
 
 
 def create_app(config_name='default'):
@@ -14,13 +15,35 @@ def create_app(config_name='default'):
 
     app.config.from_object(config[config_name])
 
-    
     db.init_app(app)
+    CORS(app)
+
+    try:
+        init_cache(app)
+    except Exception:
+        pass
+
+    os.makedirs(app.config.get('UPLOAD_FOLDER', 'uploads'), exist_ok=True)
+    os.makedirs(app.config.get('EXPORT_FOLDER', 'exports'), exist_ok=True)
+
+    from routes.auth import auth_bp
+    from routes.admin import admin_bp
+    from routes.company import company_bp
+    from routes.student import student_bp
+    from routes.jobs import jobs_bp
+
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    app.register_blueprint(company_bp, url_prefix='/api/company')
+    app.register_blueprint(student_bp, url_prefix='/api/student')
+    app.register_blueprint(jobs_bp, url_prefix='/api/jobs')
+
+    from routes.export import export_bp
+    app.register_blueprint(export_bp, url_prefix='/api/export')
 
     with app.app_context():
         db.create_all()
 
-        # Auto-create admin user if not exists
         from models import User
         from werkzeug.security import generate_password_hash
         if not User.query.filter_by(role='admin').first():
@@ -34,7 +57,7 @@ def create_app(config_name='default'):
             db.session.commit()
             print('Admin user created: admin@ppa.com / admin123')
 
-    # Serve frontend
+    
     @app.route('/')
     def index():
         from flask import render_template
