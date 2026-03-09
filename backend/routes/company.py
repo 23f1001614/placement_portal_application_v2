@@ -154,7 +154,6 @@ def update_application_status(current_user, app_id):
     company = current_user.company
     application = Application.query.get_or_404(app_id)
 
-    # Verify the application belongs to this company's job
     job = JobPosition.query.get(application.job_id)
     if not job or job.company_id != company.id:
         return jsonify({'message': 'Access denied'}), 403
