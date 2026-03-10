@@ -3,7 +3,6 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
-
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -38,6 +37,8 @@ class Company(db.Model):
     logo_path = db.Column(db.String(300))
     is_approved = db.Column(db.Boolean, default=False)
     is_blacklisted = db.Column(db.Boolean, default=False)
+    is_deleted = db.Column(db.Boolean, default=False)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     job_positions = db.relationship('JobPosition', backref='company', lazy=True)
     placements = db.relationship('Placement', backref='company', lazy=True)
@@ -54,6 +55,7 @@ class Company(db.Model):
             'logo_path': self.logo_path,
             'is_approved': self.is_approved,
             'is_blacklisted': self.is_blacklisted,
+            'is_deleted': self.is_deleted,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
@@ -64,8 +66,8 @@ class Student(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True)
     name = db.Column(db.String(200), nullable=False)
     phone = db.Column(db.String(20))
-    education = db.Column(db.Text)
-    skills = db.Column(db.Text)
+    education = db.Column(db.Text)                
+    skills = db.Column(db.Text)                   
     resume_path = db.Column(db.String(300))
     experience = db.Column(db.Text)
     cgpa = db.Column(db.Float)
@@ -91,7 +93,6 @@ class Student(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
-
 class JobPosition(db.Model):
     __tablename__ = 'job_positions'
     id = db.Column(db.Integer, primary_key=True)
@@ -100,12 +101,14 @@ class JobPosition(db.Model):
     description = db.Column(db.Text)
     salary_min = db.Column(db.Float)
     salary_max = db.Column(db.Float)
-    skills_required = db.Column(db.Text)
+    skills_required = db.Column(db.Text)      
     experience_required = db.Column(db.String(50))
     benefits = db.Column(db.Text)
     location = db.Column(db.String(200))
     status = db.Column(db.String(20), default='active')
     is_approved = db.Column(db.Boolean, default=False)
+    is_deleted = db.Column(db.Boolean, default=False)
+    deleted_at = db.Column(db.DateTime, nullable=True)
     deadline = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     applications = db.relationship('Application', backref='job_position', lazy=True)
@@ -125,10 +128,10 @@ class JobPosition(db.Model):
             'location': self.location,
             'status': self.status,
             'is_approved': self.is_approved,
+            'is_deleted': self.is_deleted,
             'deadline': self.deadline.isoformat() if self.deadline else None,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
-
 
 
 class Application(db.Model):
@@ -136,6 +139,7 @@ class Application(db.Model):
     __table_args__ = (
         db.UniqueConstraint('student_id', 'job_id', name='uq_student_job'),
     )
+
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('students.id'), nullable=False)
     job_id = db.Column(db.Integer, db.ForeignKey('job_positions.id'), nullable=False)
