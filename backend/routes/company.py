@@ -268,7 +268,7 @@ def _generate_offer_letter(student_name, company_name, job_title, salary, locati
   <div class="line">
     <p><strong>HR Department</strong></p>
     <p>{company_name}</p>
-    <p>[EMAIL_ADDRESS]</p>
+    <p>[EMAIL_ADDRESS: {company.email}]</p>
   </div>
 </div>
 
