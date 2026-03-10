@@ -52,7 +52,7 @@ def export_placements(current_user):
         }), 202
 
     except Exception as e:
-        return export_placements_sync(current_user)
+        return jsonify({'message': 'Export failed', 'error': str(e)}), 500
 
 
 @export_bp.route('/report/<int:company_id>', methods=['POST'])
@@ -100,7 +100,6 @@ def check_task_status(current_user, task_id):
 @export_bp.route('/download/<filename>', methods=['GET'])
 @token_required
 def download_export(current_user, filename):
-    """Download an exported file."""
     from flask import current_app
     export_folder = current_app.config.get('EXPORT_FOLDER', 'exports')
     filepath = os.path.join(export_folder, filename)

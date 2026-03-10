@@ -126,6 +126,7 @@ const AdminDashboard = {
                         this.exporting = false;
                         if (res.result && res.result.file) {
                             const url = api.downloadExportUrl(res.result.file);
+                            console.debug('export download URL:', url);
                             window.open(url, '_blank');
                         }
                     } else if (res.status === 'FAILURE') {

@@ -1,9 +1,21 @@
 import os
+import sys
+from dotenv import load_dotenv
+load_dotenv()
+
+_backend_dir = os.path.dirname(os.path.abspath(__file__))
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
+
 from flask import Flask, send_from_directory
 from flask_cors import CORS
+from flask_mail import Mail
 from config import config
 from models import db
 from utils.cache import cache, init_cache
+
+
+mail = Mail()
 
 
 def create_app(config_name='default'):
@@ -17,14 +29,17 @@ def create_app(config_name='default'):
 
     db.init_app(app)
     CORS(app)
+    mail.init_app(app)
 
     try:
         init_cache(app)
     except Exception:
-        pass
+        pass 
+
 
     os.makedirs(app.config.get('UPLOAD_FOLDER', 'uploads'), exist_ok=True)
     os.makedirs(app.config.get('EXPORT_FOLDER', 'exports'), exist_ok=True)
+
 
     from routes.auth import auth_bp
     from routes.admin import admin_bp
@@ -37,6 +52,7 @@ def create_app(config_name='default'):
     app.register_blueprint(company_bp, url_prefix='/api/company')
     app.register_blueprint(student_bp, url_prefix='/api/student')
     app.register_blueprint(jobs_bp, url_prefix='/api/jobs')
+
 
     from routes.export import export_bp
     app.register_blueprint(export_bp, url_prefix='/api/export')
@@ -57,7 +73,6 @@ def create_app(config_name='default'):
             db.session.commit()
             print('Admin user created: admin@ppa.com / admin123')
 
-    
     @app.route('/')
     def index():
         from flask import render_template

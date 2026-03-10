@@ -1,4 +1,3 @@
-"""CSV export tasks – async export for students and companies."""
 import os
 import sys
 import csv

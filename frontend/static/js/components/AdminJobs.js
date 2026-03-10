@@ -76,8 +76,33 @@ const AdminJobs = {
             } catch (err) { console.error(err); }
             finally { this.loading = false; }
         },
-        async approve(id) { await api.approveJob(id); this.fetchJobs(); },
-        async remove(id) { if (confirm('Remove job?')) { await api.removeJob(id); this.fetchJobs(); } }
+        async approve(id) { 
+            // Optimistically update UI
+            const job = this.jobs.find(j => j.id === id);
+            if (job) job.is_approved = true;
+            
+            try {
+                await api.approveJob(id);
+                // Refresh after 500ms to get confirmed data
+                setTimeout(() => this.fetchJobs(), 500);
+            } catch (err) {
+                console.error(err);
+                this.fetchJobs(); // Revert on error
+            }
+        },
+        async remove(id) { 
+            if (confirm('Remove job?')) { 
+                // Optimistically update UI
+                this.jobs = this.jobs.filter(j => j.id !== id);
+                
+                try {
+                    await api.removeJob(id);
+                } catch (err) {
+                    console.error(err);
+                    this.fetchJobs(); // Revert on error
+                }
+            }
+        }
     },
     mounted() { this.fetchJobs(); }
 };

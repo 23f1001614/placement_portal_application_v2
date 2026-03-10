@@ -1,7 +1,19 @@
 const store = {
     state: Vue.reactive({
-        token: localStorage.getItem('ppa_token') || '',
-        user: JSON.parse(localStorage.getItem('ppa_user') || 'null'),
+        token: (function() {
+            try {
+                return localStorage.getItem('ppa_token') || sessionStorage.getItem('ppa_token') || '';
+            } catch (e) {
+                return sessionStorage.getItem('ppa_token') || '';
+            }
+        })(),
+        user: (function() {
+            try {
+                return JSON.parse(localStorage.getItem('ppa_user') || sessionStorage.getItem('ppa_user') || 'null');
+            } catch (e) {
+                return JSON.parse(sessionStorage.getItem('ppa_user') || 'null');
+            }
+        })(),
     }),
 
     get isLoggedIn() {
@@ -15,20 +27,34 @@ const store = {
     login(token, user) {
         this.state.token = token;
         this.state.user = user;
-        localStorage.setItem('ppa_token', token);
-        localStorage.setItem('ppa_user', JSON.stringify(user));
+        try {
+            localStorage.setItem('ppa_token', token);
+            localStorage.setItem('ppa_user', JSON.stringify(user));
+        } catch (e) {
+            sessionStorage.setItem('ppa_token', token);
+            sessionStorage.setItem('ppa_user', JSON.stringify(user));
+        }
     },
 
     logout() {
         this.state.token = '';
         this.state.user = null;
-        localStorage.removeItem('ppa_token');
-        localStorage.removeItem('ppa_user');
+        try {
+            localStorage.removeItem('ppa_token');
+            localStorage.removeItem('ppa_user');
+        } catch (e) {
+            sessionStorage.removeItem('ppa_token');
+            sessionStorage.removeItem('ppa_user');
+        }
     },
 
     updateUser(user) {
         this.state.user = user;
-        localStorage.setItem('ppa_user', JSON.stringify(user));
+        try {
+            localStorage.setItem('ppa_user', JSON.stringify(user));
+        } catch (e) {
+            sessionStorage.setItem('ppa_user', JSON.stringify(user));
+        }
     }
 };
 

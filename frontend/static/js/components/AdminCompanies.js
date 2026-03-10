@@ -76,9 +76,47 @@ const AdminCompanies = {
             } catch (err) { console.error(err); }
             finally { this.loading = false; }
         },
-        async approve(id) { await api.approveCompany(id); this.fetchCompanies(); },
-        async blacklist(id) { await api.blacklistCompany(id); this.fetchCompanies(); },
-        async remove(id) { if (confirm('Remove company?')) { await api.removeCompany(id); this.fetchCompanies(); } },
+        async approve(id) { 
+            // Optimistically update UI
+            const company = this.companies.find(c => c.id === id);
+            if (company) company.is_approved = true;
+            
+            try {
+                await api.approveCompany(id);
+                // Refresh after 500ms to get confirmed data
+                setTimeout(() => this.fetchCompanies(), 500);
+            } catch (err) {
+                console.error(err);
+                this.fetchCompanies(); // Revert on error
+            }
+        },
+        async blacklist(id) { 
+            // Optimistically update UI
+            const company = this.companies.find(c => c.id === id);
+            if (company) company.is_blacklisted = !company.is_blacklisted;
+            
+            try {
+                await api.blacklistCompany(id);
+                // Refresh after 500ms to get confirmed data
+                setTimeout(() => this.fetchCompanies(), 500);
+            } catch (err) {
+                console.error(err);
+                this.fetchCompanies(); // Revert on error
+            }
+        },
+        async remove(id) { 
+            if (confirm('Remove company?')) { 
+                // Optimistically update UI
+                this.companies = this.companies.filter(c => c.id !== id);
+                
+                try {
+                    await api.removeCompany(id);
+                } catch (err) {
+                    console.error(err);
+                    this.fetchCompanies(); // Revert on error
+                }
+            }
+        },
         statusBadge(c) {
             if (c.is_blacklisted) return 'badge-blacklisted';
             if (c.is_approved) return 'badge-approved';

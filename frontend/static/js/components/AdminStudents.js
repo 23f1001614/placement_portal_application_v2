@@ -74,7 +74,20 @@ const AdminStudents = {
             } catch (err) { console.error(err); }
             finally { this.loading = false; }
         },
-        async blacklist(id) { await api.blacklistStudent(id); this.fetchStudents(); }
+        async blacklist(id) { 
+            // Optimistically update UI
+            const student = this.students.find(s => s.id === id);
+            if (student) student.is_blacklisted = !student.is_blacklisted;
+            
+            try {
+                await api.blacklistStudent(id);
+                // Refresh after 500ms to get confirmed data
+                setTimeout(() => this.fetchStudents(), 500);
+            } catch (err) {
+                console.error(err);
+                this.fetchStudents(); // Revert on error
+            }
+        }
     },
     mounted() { this.fetchStudents(); }
 };

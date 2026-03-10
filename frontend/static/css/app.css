@@ -1,0 +1,235 @@
+:root {
+    --primary: #4f46e5;
+    --primary-light: #818cf8;
+    --primary-dark: #3730a3;
+    --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+    --shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.12);
+    --radius: 12px;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #f8f9fa;
+}
+
+
+.hero-section {
+    background: var(--gradient);
+    color: #fff;
+    padding: 4rem 0;
+}
+
+
+.card {
+    border-radius: var(--radius);
+    border: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+}
+
+.stat-card {
+    border-left: 4px solid;
+    box-shadow: var(--shadow);
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.stat-icon {
+    font-size: 2.2rem;
+    opacity: 0.2;
+}
+
+.feature-card {
+    box-shadow: var(--shadow);
+}
+
+.job-card {
+    border-left: 4px solid var(--primary);
+    box-shadow: var(--shadow);
+}
+
+
+.dashboard-header {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: #fff;
+    padding: 2rem 0;
+}
+
+
+.table-custom {
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.table-custom thead {
+    background: #1e293b;
+    color: #fff;
+}
+
+.table-custom td,
+.table-custom th {
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+}
+
+
+.table-responsive {
+    overflow: visible !important;
+}
+
+
+.badge-status {
+    font-weight: 500;
+    padding: 0.4em 0.8em;
+    border-radius: 20px;
+}
+
+.badge-approved,
+.badge-active {
+    background-color: #10b981;
+    color: #fff;
+}
+
+.badge-pending {
+    background-color: #f59e0b;
+    color: #fff;
+}
+
+.badge-blacklisted,
+.badge-rejected {
+    background-color: #ef4444;
+    color: #fff;
+}
+
+.badge-interview {
+    background-color: #6366f1;
+    color: #fff;
+}
+
+.badge-applied {
+    background-color: #3b82f6;
+    color: #fff;
+}
+
+.badge-shortlisted {
+    background-color: #f59e0b;
+    color: #fff;
+}
+
+.badge-offer {
+    background-color: #10b981;
+    color: #fff;
+}
+
+.badge-placed {
+    background-color: #059669;
+    color: #fff;
+}
+
+.badge-closed {
+    background-color: #6c757d;
+    color: #fff;
+}
+
+
+.skill-tag {
+    display: inline-block;
+    background-color: #eef2ff;
+    color: var(--primary);
+    padding: 0.2em 0.6em;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    margin: 2px;
+    font-weight: 500;
+}
+
+
+.search-bar {
+    position: relative;
+}
+
+.search-bar .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+}
+
+.search-bar input {
+    padding-left: 2.5rem;
+}
+
+
+.section-header {
+    margin-bottom: 1.5rem;
+}
+
+.section-header h4 {
+    font-weight: 700;
+}
+
+
+.loading-container {
+    text-align: center;
+    padding: 4rem 0;
+}
+
+.spinner-custom {
+    width: 3rem;
+    height: 3rem;
+    color: var(--primary);
+}
+
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 0;
+    color: #9ca3af;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    opacity: 0.3;
+}
+
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+@media (max-width: 768px) {
+    .stat-value {
+        font-size: 1.4rem;
+    }
+
+    .dashboard-header {
+        padding: 1.5rem 0;
+    }
+}

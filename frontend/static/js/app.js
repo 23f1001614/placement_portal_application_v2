@@ -80,5 +80,15 @@ app.component('admin-companies', AdminCompanies);
 app.component('admin-students', AdminStudents);
 app.component('admin-jobs', AdminJobs);
 app.component('admin-applications', AdminApplications);
+app.component('company-dashboard', CompanyDashboard);
+app.component('company-jobs', CompanyJobs);
+app.component('company-applications', CompanyApplications);
+app.component('student-dashboard', StudentDashboard);
+app.component('student-applications', StudentApplications);
+app.component('student-profile', StudentProfile);
+app.component('student-placements', StudentPlacements);
+app.component('job-list', JobList);
+app.component('job-detail', JobDetail);
+
 app.use(router);
 app.mount('#app');
