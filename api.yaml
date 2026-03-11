@@ -1,0 +1,1398 @@
+openapi: 3.0.3
+info:
+  title: Placement Portal Application API
+  description: >
+    REST API for the Placement Portal Application — connects students with
+    companies for campus placements. Supports admin, company, and student roles.
+  version: 2.0.0
+  contact:
+    name: Placement Portal Team
+
+servers:
+  - url: http://localhost:5000
+    description: Local development server
+
+# ─── Security ────────────────────────────────────────────────────────────────
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        Pass the JWT token received from /api/auth/login in the
+        Authorization header as "Bearer <token>".
+
+
+  schemas:
+    # ── Core Models ──────────────────────────────────────────────────────
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, company, student]
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    Company:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        name:
+          type: string
+        industry:
+          type: string
+        location:
+          type: string
+        website:
+          type: string
+        description:
+          type: string
+        is_approved:
+          type: boolean
+        is_blacklisted:
+          type: boolean
+        is_deleted:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    Student:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        education:
+          type: string
+        skills:
+          type: string
+        experience:
+          type: string
+        cgpa:
+          type: number
+          format: float
+        graduation_year:
+          type: integer
+        resume_path:
+          type: string
+        is_blacklisted:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    JobPosition:
+      type: object
+      properties:
+        id:
+          type: integer
+        company_id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        salary_min:
+          type: number
+        salary_max:
+          type: number
+        skills_required:
+          type: string
+        experience_required:
+          type: string
+        benefits:
+          type: string
+        location:
+          type: string
+        status:
+          type: string
+          enum: [active, closed]
+        is_approved:
+          type: boolean
+        is_deleted:
+          type: boolean
+        deadline:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    Application:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        job_id:
+          type: integer
+        status:
+          type: string
+          enum: [applied, shortlisted, interview, offer, rejected, placed]
+        feedback:
+          type: string
+        interview_date:
+          type: string
+          format: date
+        interview_time:
+          type: string
+        applied_date:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Placement:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        company_id:
+          type: integer
+        job_id:
+          type: integer
+        application_id:
+          type: integer
+        position:
+          type: string
+        salary:
+          type: number
+        joining_date:
+          type: string
+          format: date
+        offer_letter_path:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    # ── Common Responses ─────────────────────────────────────────────────
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+
+paths:
+
+
+  # │  AUTH  (/api/auth)
+
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: User login
+      description: Authenticate with email and password. Returns a JWT token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@ppa.com
+                password:
+                  type: string
+                  example: admin123
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  token:
+                    type: string
+                  user:
+                    $ref: "#/components/schemas/User"
+        "400":
+          description: Missing email or password
+        "401":
+          description: Invalid credentials
+        "403":
+          description: Account deactivated / company pending / blacklisted
+
+  /api/auth/register/student:
+    post:
+      tags: [Auth]
+      summary: Register a new student
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                name:
+                  type: string
+                phone:
+                  type: string
+                education:
+                  type: string
+                skills:
+                  type: string
+                experience:
+                  type: string
+                cgpa:
+                  type: number
+                graduation_year:
+                  type: integer
+      responses:
+        "201":
+          description: Student registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: "#/components/schemas/User"
+        "400":
+          description: Missing required fields
+        "409":
+          description: Email already registered
+
+  /api/auth/register/company:
+    post:
+      tags: [Auth]
+      summary: Register a new company
+      description: Company will require admin approval before it can operate.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                name:
+                  type: string
+                industry:
+                  type: string
+                location:
+                  type: string
+                website:
+                  type: string
+                description:
+                  type: string
+      responses:
+        "201":
+          description: Company registered (pending approval)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: "#/components/schemas/User"
+        "400":
+          description: Missing required fields
+        "409":
+          description: Email already registered
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user profile
+      description: Returns the authenticated user's info including role-specific profile (student/company).
+      responses:
+        "200":
+          description: Current user data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    allOf:
+                      - $ref: "#/components/schemas/User"
+                      - type: object
+                        properties:
+                          student:
+                            $ref: "#/components/schemas/Student"
+                          company:
+                            $ref: "#/components/schemas/Company"
+
+  # │  ADMIN  (/api/admin)
+
+  /api/admin/dashboard:
+    get:
+      tags: [Admin]
+      summary: Admin dashboard statistics
+      description: Returns aggregate counts for students, companies, jobs, applications, and placements.
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stats:
+                    type: object
+                    properties:
+                      total_students:
+                        type: integer
+                      total_companies:
+                        type: integer
+                      total_jobs:
+                        type: integer
+                      total_applications:
+                        type: integer
+                      total_placements:
+                        type: integer
+                      pending_companies:
+                        type: integer
+                      pending_jobs:
+                        type: integer
+                      active_jobs:
+                        type: integer
+
+  /api/admin/companies:
+    get:
+      tags: [Admin]
+      summary: List all companies
+      description: Search and filter companies by name, industry, or approval status.
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Filter by company name (case-insensitive)
+        - name: industry
+          in: query
+          schema:
+            type: string
+          description: Filter by industry
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [approved, pending, blacklisted]
+          description: Filter by approval status
+      responses:
+        "200":
+          description: List of companies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  companies:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Company"
+
+  /api/admin/companies/{company_id}/approve:
+    put:
+      tags: [Admin]
+      summary: Approve a company
+      parameters:
+        - name: company_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Company approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  company:
+                    $ref: "#/components/schemas/Company"
+        "404":
+          description: Company not found
+
+  /api/admin/companies/{company_id}:
+    delete:
+      tags: [Admin]
+      summary: Soft-delete a company
+      parameters:
+        - name: company_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Company deleted
+        "404":
+          description: Company not found
+
+  /api/admin/companies/{company_id}/blacklist:
+    put:
+      tags: [Admin]
+      summary: Toggle company blacklist status
+      parameters:
+        - name: company_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Company blacklist toggled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  company:
+                    $ref: "#/components/schemas/Company"
+        "404":
+          description: Company not found
+
+  /api/admin/students:
+    get:
+      tags: [Admin]
+      summary: List all students
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by name, phone, or ID
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, blacklisted]
+      responses:
+        "200":
+          description: List of students
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  students:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Student"
+
+  /api/admin/students/{student_id}/blacklist:
+    put:
+      tags: [Admin]
+      summary: Toggle student blacklist status
+      parameters:
+        - name: student_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Student blacklist toggled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  student:
+                    $ref: "#/components/schemas/Student"
+        "404":
+          description: Student not found
+
+  /api/admin/jobs:
+    get:
+      tags: [Admin]
+      summary: List all job positions
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by job title
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, active, closed]
+      responses:
+        "200":
+          description: List of jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/JobPosition"
+
+  /api/admin/jobs/{job_id}/approve:
+    put:
+      tags: [Admin]
+      summary: Approve a job posting
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  job:
+                    $ref: "#/components/schemas/JobPosition"
+        "404":
+          description: Job not found
+
+  /api/admin/jobs/{job_id}:
+    delete:
+      tags: [Admin]
+      summary: Soft-delete a job posting
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job deleted
+        "404":
+          description: Job not found
+
+  /api/admin/applications:
+    get:
+      tags: [Admin]
+      summary: List all applications
+      description: Returns every application across all students and jobs, ordered by most recent first.
+      responses:
+        "200":
+          description: List of applications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applications:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Application"
+
+  # │  COMPANY  (/api/company)
+
+  /api/company/dashboard:
+    get:
+      tags: [Company]
+      summary: Company dashboard
+      description: Returns company profile and statistics (jobs, applications, shortlisted).
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  company:
+                    $ref: "#/components/schemas/Company"
+                  stats:
+                    type: object
+                    properties:
+                      total_jobs:
+                        type: integer
+                      active_jobs:
+                        type: integer
+                      total_applications:
+                        type: integer
+                      shortlisted_candidates:
+                        type: integer
+        "404":
+          description: Company profile not found
+
+  /api/company/profile:
+    put:
+      tags: [Company]
+      summary: Update company profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                industry:
+                  type: string
+                location:
+                  type: string
+                website:
+                  type: string
+                description:
+                  type: string
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  company:
+                    $ref: "#/components/schemas/Company"
+        "404":
+          description: Company profile not found
+
+  /api/company/jobs:
+    get:
+      tags: [Company]
+      summary: List company's own jobs
+      responses:
+        "200":
+          description: List of jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/JobPosition"
+
+    post:
+      tags: [Company]
+      summary: Create a new job posting
+      description: Company must be approved. Job will require admin approval before becoming visible.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                salary_min:
+                  type: number
+                salary_max:
+                  type: number
+                skills_required:
+                  type: string
+                  description: Comma-separated list
+                experience_required:
+                  type: string
+                benefits:
+                  type: string
+                location:
+                  type: string
+                deadline:
+                  type: string
+                  format: date
+      responses:
+        "201":
+          description: Job posted (pending approval)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  job:
+                    $ref: "#/components/schemas/JobPosition"
+        "400":
+          description: Missing title
+        "403":
+          description: Company not approved or blacklisted
+
+  /api/company/jobs/{job_id}:
+    put:
+      tags: [Company]
+      summary: Update a job posting
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                salary_min:
+                  type: number
+                salary_max:
+                  type: number
+                skills_required:
+                  type: string
+                experience_required:
+                  type: string
+                benefits:
+                  type: string
+                location:
+                  type: string
+                status:
+                  type: string
+                  enum: [active, closed]
+                deadline:
+                  type: string
+                  format: date
+      responses:
+        "200":
+          description: Job updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  job:
+                    $ref: "#/components/schemas/JobPosition"
+        "404":
+          description: Job not found or does not belong to this company
+
+  /api/company/jobs/{job_id}/applications:
+    get:
+      tags: [Company]
+      summary: Get applicants for a specific job
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of applications with student details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applications:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: "#/components/schemas/Application"
+                        - type: object
+                          properties:
+                            student:
+                              $ref: "#/components/schemas/Student"
+                  job:
+                    $ref: "#/components/schemas/JobPosition"
+        "404":
+          description: Job not found or does not belong to this company
+
+  /api/company/applications/{app_id}/status:
+    put:
+      tags: [Company]
+      summary: Update application status
+      description: >
+        Update an application's status. Setting status to "offer" automatically
+        generates a placement record and an offer letter.
+      parameters:
+        - name: app_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [applied, shortlisted, interview, offer, rejected, placed]
+                feedback:
+                  type: string
+                interview_date:
+                  type: string
+                  format: date
+                  description: "Format: YYYY-MM-DD"
+                interview_time:
+                  type: string
+                  description: "e.g. 10:00 AM"
+      responses:
+        "200":
+          description: Application status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  application:
+                    $ref: "#/components/schemas/Application"
+        "400":
+          description: Invalid status value
+        "403":
+          description: Access denied — job does not belong to this company
+        "404":
+          description: Application not found
+
+  /api/company/applications/{app_id}/resume:
+    get:
+      tags: [Company]
+      summary: Download applicant's resume
+      parameters:
+        - name: app_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Resume file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "403":
+          description: Access denied
+        "404":
+          description: No resume available or file not found on server
+
+  # STUDENT  (/api/student)
+
+
+  /api/student/dashboard:
+    get:
+      tags: [Student]
+      summary: Student dashboard
+      description: Returns student profile and stats (applications, shortlisted, interviews, offers, placements).
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  student:
+                    $ref: "#/components/schemas/Student"
+                  stats:
+                    type: object
+                    properties:
+                      total_applications:
+                        type: integer
+                      shortlisted:
+                        type: integer
+                      interviews:
+                        type: integer
+                      offers:
+                        type: integer
+                      placements:
+                        type: integer
+        "404":
+          description: Student profile not found
+
+  /api/student/profile:
+    put:
+      tags: [Student]
+      summary: Update student profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                phone:
+                  type: string
+                education:
+                  type: string
+                skills:
+                  type: string
+                experience:
+                  type: string
+                cgpa:
+                  type: number
+                graduation_year:
+                  type: integer
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  student:
+                    $ref: "#/components/schemas/Student"
+        "404":
+          description: Student profile not found
+
+  /api/student/profile/resume:
+    post:
+      tags: [Student]
+      summary: Upload resume
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [resume]
+              properties:
+                resume:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Resume uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  resume_path:
+                    type: string
+        "400":
+          description: No file provided
+        "404":
+          description: Student profile not found
+
+  /api/student/applications:
+    get:
+      tags: [Student]
+      summary: List student's applications
+      responses:
+        "200":
+          description: List of applications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applications:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Application"
+
+  /api/student/apply/{job_id}:
+    post:
+      tags: [Student]
+      summary: Apply for a job
+      description: Student must not be blacklisted. Job must be approved and active. Duplicate applications are rejected.
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  application:
+                    $ref: "#/components/schemas/Application"
+        "400":
+          description: Job not available
+        "403":
+          description: Student is blacklisted
+        "404":
+          description: Job not found
+        "409":
+          description: Already applied for this job
+
+  /api/student/interviews:
+    get:
+      tags: [Student]
+      summary: List upcoming interviews
+      description: Returns applications with status "interview" that have an interview date set.
+      responses:
+        "200":
+          description: List of interviews
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  interviews:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Application"
+
+  /api/student/placements:
+    get:
+      tags: [Student]
+      summary: List student's placements
+      responses:
+        "200":
+          description: List of placements
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  placements:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Placement"
+
+  /api/student/placements/{placement_id}/offer-letter:
+    get:
+      tags: [Student]
+      summary: Download offer letter
+      parameters:
+        - name: placement_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Offer letter HTML file
+          content:
+            text/html:
+              schema:
+                type: string
+        "404":
+          description: No offer letter available or file not found
+
+
+  # │  JOBS  (/api/jobs) — Public (authenticated)
+
+  /api/jobs:
+    get:
+      tags: [Jobs]
+      summary: Browse approved & active jobs
+      description: Paginated, cached (5 min). Only shows approved, active, non-deleted jobs.
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by title or description
+        - name: company
+          in: query
+          schema:
+            type: string
+          description: Filter by company name
+        - name: skills
+          in: query
+          schema:
+            type: string
+          description: Filter by skills
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Paginated list of jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/JobPosition"
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  per_page:
+                    type: integer
+                  pages:
+                    type: integer
+
+  /api/jobs/{job_id}:
+    get:
+      tags: [Jobs]
+      summary: Get job details
+      description: Cached for 10 minutes. Includes company info.
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job details with company
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job:
+                    allOf:
+                      - $ref: "#/components/schemas/JobPosition"
+                      - type: object
+                        properties:
+                          company:
+                            $ref: "#/components/schemas/Company"
+        "404":
+          description: Job not found
+
+  # │  EXPORT  (/api/export) — Background tasks / CSV / Reports
+
+  /api/export/applications:
+    post:
+      tags: [Export]
+      summary: Export applications as CSV
+      description: >
+        Triggers async Celery export. Falls back to synchronous CSV download
+        if Celery is unavailable. Behaviour varies by role (student exports own,
+        company exports its job applications).
+      responses:
+        "202":
+          description: Export task started (async)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  task_id:
+                    type: string
+        "200":
+          description: Synchronous CSV fallback
+          content:
+            text/csv:
+              schema:
+                type: string
+        "400":
+          description: Export not available for this role
+
+  /api/export/placements:
+    post:
+      tags: [Export]
+      summary: Export placements as CSV
+      description: >
+        Available for all roles. Student exports own placements, company exports
+        its placements, admin exports all. Uses Celery when available.
+      responses:
+        "202":
+          description: Export task started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  task_id:
+                    type: string
+        "400":
+          description: Export not available
+        "500":
+          description: Export failed
+
+  /api/export/report/{company_id}:
+    post:
+      tags: [Export]
+      summary: Generate placement report for a company
+      description: >
+        Admin can generate for any company. Company role auto-uses its own ID.
+        Produces an HTML report. Uses Celery when available, falls back to sync.
+      parameters:
+        - name: company_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Company ID (ignored for company role — uses own ID)
+      responses:
+        "202":
+          description: Report generation started (async)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  task_id:
+                    type: string
+        "200":
+          description: Synchronous report generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  result:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      file:
+                        type: string
+                      company:
+                        type: string
+                      total_applications:
+                        type: integer
+                      total_shortlisted:
+                        type: integer
+                      total_placed:
+                        type: integer
+        "404":
+          description: Company not found
+
+  /api/export/task-status/{task_id}:
+    get:
+      tags: [Export]
+      summary: Check background task status
+      description: Polls the status of a Celery async task by its ID.
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Task status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [PENDING, STARTED, SUCCESS, FAILURE, RETRY, REVOKED]
+                  result:
+                    type: object
+                    description: Present when task is complete
+                  error:
+                    type: string
+                    description: Present when task has failed
+        "503":
+          description: Celery not available
+
+  /api/export/download/{filename}:
+    get:
+      tags: [Export]
+      summary: Download an exported file
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: File not found
